@@ -1,0 +1,83 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  UID:
+    sh: id -u
+  BREW_EXISTS:
+    sh: command -v brew
+  HOME:
+    sh: cd ~ && pwd
+
+tasks:
+  debug:
+    cmds: []
+
+  directories:
+    run: once
+    silent: true
+    cmds:
+      - cmd: mkdir -p '{{.HOME}}/Library/LaunchAgents'
+        platforms: [darwin]
+        silent: true
+      - cmd: mkdir -p '{{.HOME}}/.local/state/litellm' '{{.HOME}}/.config/litellm/providers' '{{.HOME}}/.local/bin'
+
+  uv:bootstrap:
+    run: once
+    cmds:
+      - cmd: |
+          brew install uv
+        if: '{{ne .BREW_EXISTS ""}}'
+      - cmd: curl -LsSf https://astral.sh/uv/install.sh | sh
+        if: '{{eq .BREW_EXISTS ""}}'
+    status:
+      - command -v uv
+
+  litellm:install:
+    run: once
+    deps:
+      - directories
+      - uv:bootstrap
+    cmds:
+      - cmd: uv tool install 'litellm[proxy]'
+    status:
+      - command -v litellm
+      - command -v litellm-proxy
+
+  service:stop:
+    desc: Stop the running LiteLLM authenticating proxy
+    run: once
+    deps:
+      - litellm:install
+    cmds:
+      - cmd: launchctl bootout 'gui/{{ .UID }}/com.litellm.server'
+    status:
+      - test -z "$(launchctl list | grep com.litellm.server || true)"
+
+  service:register:
+    desc: Register LiteLLM authenticating proxy
+    cmds:
+      - cmd: sed -e 's/HOME/{{.HOME}}/g;s/PORT/{{.LITELLM_PORT}}/g' '{{.TASKFILE_DIR}}/com.litellm.server.plist' > '{{.HOME}}/Library/LaunchAgents/com.litellm.server.plist'
+    status:
+      - test -e '{{.HOME}}/Library/LaunchAgents/com.litellm.server.plist'
+
+  service:start:
+    desc: Start LiteLLM authenticating proxy
+    run: once
+    deps:
+      - litellm:install
+      - service:register
+    cmds:
+      - cmd: launchctl bootstrap 'gui/{{ .UID }}' '{{.HOME}}/Library/LaunchAgents/com.litellm.server.plist'
+    status:
+      - launchctl print 'gui/{{ .UID }}/com.litellm.server'
+
+  service:restart:
+    desc: Restart LiteLLM authenticating proxy
+    run: once
+    deps:
+      - litellm:install
+      - service:register
+    cmds:
+      - cmd: launchctl kickstart -k 'gui/{{ .UID }}/com.litellm.server'

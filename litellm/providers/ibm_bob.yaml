@@ -1,0 +1,7 @@
+---
+model_list:
+  - model_name: 'ibm-bob/premium'
+    litellm_params:
+      model: 'openai/premium'
+      api_base: 'https://prod.ibm-bob-staging.cloud.ibm.com'
+      api_key: 'os.environ/BOBSHELL_API_KEY'
