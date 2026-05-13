@@ -9,6 +9,8 @@ vars:
     sh: command -v brew
   HOME:
     sh: cd ~ && pwd
+  BOBAPIKEY:
+    sh: printf '%s\n' "$BOBSHELL_API_KEY"
 
 tasks:
   debug:
@@ -57,10 +59,17 @@ tasks:
 
   service:register:
     desc: Register LiteLLM authenticating proxy
+    deps:
+      - directories
     cmds:
-      - cmd: sed -e 's/HOME/{{.HOME}}/g;s/PORT/{{.LITELLM_PORT}}/g' '{{.TASKFILE_DIR}}/com.litellm.server.plist' > '{{.HOME}}/Library/LaunchAgents/com.litellm.server.plist'
-    status:
-      - test -e '{{.HOME}}/Library/LaunchAgents/com.litellm.server.plist'
+      - cmd: sed -e 's|HOME|{{.HOME}}|g;s|PORT|{{.LITELLM_PORT}}|g' '{{.TASKFILE_DIR}}/com.litellm.server.plist' > '{{.HOME}}/Library/LaunchAgents/com.litellm.server.plist'
+      - cmd: |
+          env | awk '/BOBSHELL/ { print("export", $0) }' > '{{.HOME}}/.local/state/litellm/env.sh'
+    sources:
+      - ./com.litellm.server.plist
+    generates:
+      - '{{.HOME}}/Library/LaunchAgents/com.litellm.server.plist'
+      - '{{.HOME}}/.local/state/litellm/env.sh'
 
   service:start:
     desc: Start LiteLLM authenticating proxy
