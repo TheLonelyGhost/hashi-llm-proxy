@@ -3,9 +3,6 @@ include:
   - providers/ibm_bob.yaml
   - providers/github_copilot.yaml
 
-environment_variables:
-  GITHUB_COPILOT_TOKEN_DIR: 'HOME/.local/state/litellm/github_copilot'
-
 model_list: []
   # - model_name: ''
   #   litellm_params:

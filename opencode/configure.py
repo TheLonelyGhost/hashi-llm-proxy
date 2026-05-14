@@ -6,6 +6,9 @@ import pathlib
 import subprocess
 
 
+LITELLM_PROXY_URL = os.environ["LITELLM_PROXY_URL"]
+
+
 def merge(a: dict, b: dict, path=[]):
     for key in b:
         if key in a:
@@ -20,18 +23,26 @@ def merge(a: dict, b: dict, path=[]):
 
 def main() -> None:
     proc = subprocess.run(
-        ["litellm-proxy", "models", "list", "--format", "json"],
+        ["curl", f"{LITELLM_PROXY_URL}/models"],
         check=True,
         capture_output=True,
         text=True,
     )
 
-    models = json.loads(proc.stdout)
-    output = {
-        model["id"]: {"name": model["id"]}
-        for model in models
-        if isinstance(model, dict) and "id" in model
-    }
+    output = json.loads(proc.stdout)
+    models = {}
+    for model in output["data"]:
+        if not isinstance(model, dict):
+            continue
+        if "id" not in model:
+            continue
+
+        m = {"name": model["id"]}
+
+        if m["name"].startswith("ibm-bob/"):
+            m["provider"] = {"npm": "@ai-sdk/openai-compatible"}
+
+        models[model["id"]] = m
 
     config_path = pathlib.Path("~/.config/opencode/opencode.json").expanduser()
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -47,13 +58,13 @@ def main() -> None:
     providers.setdefault("litellm", {})
     litellm = config["provider"]["litellm"]
 
-    litellm.setdefault("npm", "@ai-sdk/openai-compatible")
+    litellm.setdefault("npm", "@ai-sdk/openai")
     litellm.setdefault("name", "LiteLLM")
     litellm.setdefault("options", {})
     options = litellm["options"]
-    options.setdefault("baseURL", os.environ["LITELLM_PROXY_URL"])
+    options.setdefault("baseURL", LITELLM_PROXY_URL)
     litellm.setdefault("models", {})
-    litellm["models"] = merge(litellm["models"], output)
+    litellm["models"] = merge(litellm["models"], models)
 
     with config_path.open("w") as f:
         json.dump(config, f, indent=2)

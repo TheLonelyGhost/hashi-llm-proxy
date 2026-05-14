@@ -3,14 +3,9 @@
 version: '3'
 
 includes:
-  macos:
-    taskfile: macos
+  docker:
+    taskfile: docker
     internal: true
-    vars:
-      LITELLM_PORT:
-        ref: .LITELLM_PORT
-      LITELLM_PROXY_URL:
-        ref: .LITELLM_PROXY_URL
 
 vars:
   LITELLM_PORT: '4444'
@@ -22,11 +17,6 @@ env:
   LITELLM_PROXY_URL: '{{.LITELLM_PROXY_URL}}'
 
 tasks:
-  debug:
-    cmds:
-      - task: macos:debug
-        platforms: [darwin]
-
   litellm:
     desc: Installs and starts LiteLLM authenticating proxy
     aliases:
@@ -39,34 +29,56 @@ tasks:
     desc: Starts LiteLLM authenticating proxy
     run: once
     cmds:
-      - task: macos:service:start
-        platforms: [darwin]
+      - task: litellm:env
+      - task: docker:service:start
+        silent: true
 
   litellm:stop:
     desc: Stops LiteLLM authenticating proxy
     run: once
     cmds:
-      - task: macos:service:stop
-        platforms: [darwin]
+      - task: docker:service:stop
+        silent: true
 
   litellm:restart:
     desc: Restarts LiteLLM authenticating proxy
     run: once
     cmds:
-      - task: macos:service:restart
-        platforms: [darwin]
+      - task: docker:service:restart
+        silent: true
+
+  litellm:logs:
+    desc: View logs for LiteLLM authenticating proxy
+    run: once
+    interactive: true
+    silent: true
+    cmds:
+      - task: docker:logs
+  
+  litellm:env:
+    desc: Refreshes LiteLLM credentials
+    run: once
+    silent: true
+    cmds:
+      - cmd: mkdir -p '{{.HOME}}/.local/state/litellm'
+      - cmd: |
+          {
+            # TODO: More environment variables
+            env | awk '/BOBSHELL/ { print("export", $0) }'
+          } > '{{.HOME}}/.local/state/litellm/env'
 
   litellm:configure:
     desc: Configures LiteLLM authenticating proxy
     run: once
     cmds:
-      - cmd: mkdir -p ~/.config/litellm/providers
+      - cmd: mkdir -p '{{.HOME}}/.config/litellm/providers'
         silent: true
-      - cmd: cp -r ./litellm/providers/*.yaml ~/.config/litellm/providers/
-      - cmd: sed -e 's/HOME/{{.HOME}}/g' ./litellm/config.yaml > ~/.config/litellm/config.yaml
+      - cmd: cp -r ./litellm/providers/*.yaml '{{.HOME}}/.config/litellm/providers/'
+      - cmd: sed -e 's/HOME/{{.HOME}}/g' ./litellm/config.yaml > '{{.HOME}}/.config/litellm/config.yaml'
+      - task: litellm:env
     status:
-      - test -e ~/.config/litellm/providers
-      - test -e ~/.config/litellm/config.yaml
+      - test -e '{{.HOME}}/.config/litellm/providers'
+      - test -e '{{.HOME}}/.config/litellm/config.yaml'
 
   opencode:configure:
     desc: Configures OpenCode to include LiteLLM proxy info

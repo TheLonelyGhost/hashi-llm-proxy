@@ -47,15 +47,12 @@ task: Available tasks for this project:
 * opencode:configure:       Configures OpenCode to include LiteLLM proxy info
 ```
 
-## LiteLLM On macOS
-
-The macOS flow uses a LaunchAgent named `com.litellm.server`.
+## LiteLLM
 
 Runtime files are stored in:
 
 - `~/.config/litellm/`
 - `~/.local/state/litellm/`
-- `~/Library/LaunchAgents/com.litellm.server.plist`
 
 The proxy runs listening on port `4444/tcp` (on `127.0.0.1`) by default.
 
@@ -72,9 +69,9 @@ These are merged into the generated LiteLLM config by `task litellm:configure`.
 
 `task opencode:configure` runs `opencode/configure.py`, which:
 
-- reads the models exposed by `litellm-proxy`
+- Creates/updates a "LiteLLM" provider to talk to `http://127.0.0.1:4444/v1`
+- reads the models exposed via `http://127.0.0.1:4444/v1/models`
 - writes them into `~/.config/opencode/opencode.json`
-- sets the LiteLLM provider's base URL to `http://127.0.0.1:4444/v1`
 
 ## Stop Or Restart
 

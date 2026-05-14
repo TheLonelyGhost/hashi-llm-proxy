@@ -1,0 +1,17 @@
+---
+name: litellm
+
+services:
+  proxy:
+    image: ghcr.io/berriai/litellm:main-stable
+    env_file: '${HOME}/.local/state/litellm/env'
+    restart: unless-stopped
+    ports:
+      - "${LITELLM_PORT:-4444}:4000"
+    volumes:
+      - '${HOME}/.local/state/litellm:/data:rw'
+      - '${HOME}/.config/litellm:/config:ro'
+    environment:
+      CONFIG_FILE_PATH: '/config/config.yaml'
+      GITHUB_COPILOT_TOKEN_DIR: '/data/github_copilot'
+      LITELLM_LOG: 'DEBUG'
