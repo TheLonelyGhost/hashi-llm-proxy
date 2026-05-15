@@ -1,12 +1,20 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "httpx>=0.28.1",
+# ]
+# ///
 
 import json
 import os
 import pathlib
-import subprocess
+
+import httpx
 
 
 LITELLM_PROXY_URL = os.environ["LITELLM_PROXY_URL"]
+OPENCODE_CONFIG_DIR = pathlib.Path("~/.config/opencode").expanduser().resolve()
 
 
 def merge(a: dict, b: dict, path=[]):
@@ -22,14 +30,9 @@ def merge(a: dict, b: dict, path=[]):
 
 
 def main() -> None:
-    proc = subprocess.run(
-        ["curl", f"{LITELLM_PROXY_URL}/models"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    http = httpx.Client(base_url=LITELLM_PROXY_URL)
+    output = http.get("/v1/models").raise_for_status().json()
 
-    output = json.loads(proc.stdout)
     models = {}
     for model in output["data"]:
         if not isinstance(model, dict):
@@ -37,15 +40,10 @@ def main() -> None:
         if "id" not in model:
             continue
 
-        m = {"name": model["id"]}
+        models[model["id"]] = {"name": model["id"]}
 
-        if m["name"].startswith("ibm-bob/"):
-            m["provider"] = {"npm": "@ai-sdk/openai-compatible"}
-
-        models[model["id"]] = m
-
-    config_path = pathlib.Path("~/.config/opencode/opencode.json").expanduser()
-    config_path.parent.mkdir(parents=True, exist_ok=True)
+    OPENCODE_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    config_path = OPENCODE_CONFIG_DIR / "opencode.json"
     if config_path.exists():
         with config_path.open("r") as f:
             config = json.load(f)

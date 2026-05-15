@@ -9,7 +9,7 @@ includes:
 
 vars:
   LITELLM_PORT: '4444'
-  LITELLM_PROXY_URL: 'http://127.0.0.1:{{.LITELLM_PORT}}/v1'
+  LITELLM_PROXY_URL: 'http://127.0.0.1:{{.LITELLM_PORT}}'
   HOME:
     sh: cd ~ && pwd
 
@@ -30,6 +30,7 @@ tasks:
     run: once
     cmds:
       - task: litellm:env
+      - task: litellm:providers
       - task: docker:service:start
         silent: true
 
@@ -71,17 +72,45 @@ tasks:
     desc: Configures LiteLLM authenticating proxy
     run: once
     cmds:
-      - cmd: mkdir -p '{{.HOME}}/.config/litellm/providers'
-        silent: true
-      - cmd: cp -r ./litellm/providers/*.yaml '{{.HOME}}/.config/litellm/providers/'
-      - cmd: sed -e 's/HOME/{{.HOME}}/g' ./litellm/config.yaml > '{{.HOME}}/.config/litellm/config.yaml'
+      - cmd: cp ./litellm/config.yaml '{{.HOME}}/.config/litellm/config.yaml'
+      - task: litellm:providers
       - task: litellm:env
     status:
-      - test -e '{{.HOME}}/.config/litellm/providers'
       - test -e '{{.HOME}}/.config/litellm/config.yaml'
+
+  litellm:providers:
+    desc: Sync available models from backend LLM providers
+    run: once
+    silent: true
+    deps:
+      - uv:install
+    cmds:
+      - cmd: |
+          mkdir -p \
+            './litellm/providers' \
+            '{{.HOME}}/.config/litellm/providers' \
+            '{{.HOME}}/.local/state/litellm/github_copilot'
+        silent: true
+      - cmd: ./scripts/generate-ibm-bob.py
+      - cmd: ./scripts/generate-copilot.py
+      - cmd: cp ./litellm/providers/*.yaml '{{.HOME}}/.config/litellm/providers/'
+
+  uv:install:
+    desc: Install `uv` runtime for Python
+    run: once
+    interactive: true
+    internal: true
+    silent: true
+    cmds:
+      - cmd: brew install uv
+        platforms: [darwin]
+      - cmd: curl -LsSf https://astral.sh/uv/install.sh | sh
+        platforms: [linux]
+    status:
+      - command -v uv
 
   opencode:configure:
     desc: Configures OpenCode to include LiteLLM proxy info
     run: once
     cmds:
-      - cmd: python3 ./opencode/configure.py
+      - cmd: ./scripts/configure-opencode.py

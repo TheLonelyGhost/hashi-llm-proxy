@@ -15,3 +15,4 @@ services:
       CONFIG_FILE_PATH: '/config/config.yaml'
       GITHUB_COPILOT_TOKEN_DIR: '/data/github_copilot'
       LITELLM_LOG: 'DEBUG'
+      LITELLM_MODE: 'PRODUCTION'

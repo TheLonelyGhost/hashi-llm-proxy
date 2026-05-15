@@ -1,7 +1,7 @@
 ---
-include:
-  - providers/ibm_bob.yaml
-  - providers/github_copilot.yaml
+include: []
+  # - providers/ibm_bob.yaml
+  # - providers/github_copilot.yaml
 
 model_list: []
   # - model_name: ''

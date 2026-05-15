@@ -23,24 +23,26 @@ The default proxy URL is `http://127.0.0.1:4444/v1`.
 ~/workspace $ task
 
 task: Task "litellm:configure" is up to date
-task: Task "macos:service:register" is up to date
-task: Task "macos:uv:bootstrap" is up to date
-task: Task "macos:litellm:install" is up to date
-task: Task "macos:service:start" is up to date
+[+] up 2/2
+ ✔ Network litellm_default   Created         0.0s
+ ✔ Container litellm-proxy-1 Started         0.1s
 ```
 
-(Optionally):
+Then edit your `~/.config/litellm/config.yaml` to include preferred provider models,
+followed by `task litellm:restart`.
 
-```bash
-~/workspace $ task opencode:configure
-```
+Optionally, generate OpenCode configurations mapping to all available models served
+by LiteLLM under a "LiteLLM" provider: `task opencode:configure`
 
 ## Taskfile Summary
 
-```
+```sh
 task: Available tasks for this project:
 * litellm:                  Installs and starts LiteLLM authenticating proxy      (aliases: default)
 * litellm:configure:        Configures LiteLLM authenticating proxy
+* litellm:env:              Refreshes LiteLLM credentials
+* litellm:logs:             View logs for LiteLLM authenticating proxy
+* litellm:providers:        Configure LiteLLM backend providers
 * litellm:restart:          Restarts LiteLLM authenticating proxy
 * litellm:start:            Starts LiteLLM authenticating proxy
 * litellm:stop:             Stops LiteLLM authenticating proxy
@@ -58,24 +60,26 @@ The proxy runs listening on port `4444/tcp` (on `127.0.0.1`) by default.
 
 ## Provider Config
 
-Included provider files live in `litellm/providers/`:
+Provider files in `litellm/providers/` are generated via `./scripts/generate-*.py`
+scripts. The model lists are regenerated on-demand by `task litellm:providers`.
 
-- `github_copilot.yaml` (as authorized by IBM's restrictions)
-- `ibm_bob.yaml`
+Supports:
 
-These are merged into the generated LiteLLM config by `task litellm:configure`.
+- GitHub Copilot (individual, business, or enterprise)
+- IBM Bob
 
 ## OpenCode Config
 
-`task opencode:configure` runs `opencode/configure.py`, which:
+`task opencode:configure` runs `./scripts/configure-opencode.py`, which:
 
-- Creates/updates a "LiteLLM" provider to talk to `http://127.0.0.1:4444/v1`
-- reads the models exposed via `http://127.0.0.1:4444/v1/models`
-- writes them into `~/.config/opencode/opencode.json`
+- Creates a "LiteLLM" provider to talk to the LiteLM authenticating proxy (`http://127.0.0.1:4444`)
+- Reads the models exposed via `http://127.0.0.1:4444/v1/models`
+- Writes any models exposed by LiteLLM into the LiteLLM provider models in `~/.config/opencode/opencode.json`
 
-## Stop Or Restart
+## LiteLLM Service Management
 
-```sh
+```bash
+task litellm:start
 task litellm:stop
 task litellm:restart
 ```
